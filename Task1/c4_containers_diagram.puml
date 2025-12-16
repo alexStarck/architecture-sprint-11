@@ -1,0 +1,104 @@
+@startuml "Future 2.0 Target Architecture - C4 Container Diagram"
+!define DEVICONS https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/devicons
+!define FONTAWESOME https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+!include https://raw.githubusercontent.com/adrianvlupu/C4-PlantUML/latest/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title "Архитектура организации «Будущее 2.0» - Целевое состояние (C4 Container Diagram)"
+
+Person_Ext(doctor, "Врач", "Использует медицинское оборудование и ИИ для диагностики")
+Person(analyst, "Бизнес-аналитик", "Создает отчеты в портале самообслуживания")
+Person(admin, "Администратор", "Управляет системой и правами доступа")
+Person(client, "Клиент", "Пользователь медицинских и финансовых услуг")
+
+System_Boundary(headquarters, "Головной офис") {
+    Container(data_portal, "Портал данных", "React/Angular + API Gateway", "Единый портал самообслуживания для создания отчетов")
+    Container(api_gateway, "API Gateway", "Kong/Nginx", "Маршрутизация запросов и управление доступом")
+    Container(metadata_service, "Сервис метаданных", "Java/Go", "Управление схемами данных и доступом")
+}
+
+System_Boundary(clinical_domain, "Медицинский домен") {
+    Container(clinical_api, "Clinical API", "Java/Go", "API для работы с медицинскими данными")
+    Container(clinical_db, "Clinical Database", "PostgreSQL", "Медицинские карты, истории болезней")
+    Container(legacy_dwh, "Legacy DWH", "MS SQL Server", "Унаследованная система (поэтапный вывод)")
+    Container(clinical_etl, "Clinical ETL", "Apache Airflow", "Обработка медицинских данных")
+}
+
+System_Boundary(ai_domain, "ИИ-домен") {
+    Container(ai_service, "AI Services", "Python/MLflow", "Сервисы машинного обучения")
+    Container(ai_data_lake, "AI Data Lake", "S3/MinIO", "Данные для обучения моделей")
+    Container(ml_platform, "ML Platform", "Kubernetes", "Платформа для развертывания моделей")
+}
+
+System_Boundary(fintech_domain, "Финтех-домен") {
+    Container(fintech_api, "FinTech API", "Java/Go", "API финансовых услуг")
+    Container(fintech_db, "FinTech Database", "PostgreSQL", "Финансовые данные, кредиты")
+    Container(payment_service, "Payment Service", "Java", "Обработка платежей")
+    Container(fintech_etl, "FinTech ETL", "Apache Airflow", "Обработка финансовых данных")
+}
+
+System_Boundary(analytics_domain, "Аналитический домен") {
+    Container(data_warehouse, "Modern DWH", "Snowflake/BigQuery", "Современное хранилище данных")
+    Container(data_lake, "Data Lake", "S3/HDFS", "Озеро данных для сырых данных")
+    Container(streaming_platform, "Streaming Platform", "Apache Kafka", "Потоковая обработка данных")
+    Container(etl_orchestrator, "ETL Orchestrator", "Apache Airflow", "Управление пайплайнами данных")
+    Container(olap_engine, "OLAP Engine", "ClickHouse/Druid", "Быстрая аналитическая обработка")
+}
+
+System_Boundary(integration_layer, "Слой интеграции") {
+    Container(event_bus, "Event Bus", "Apache Kafka", "Асинхронный обмен событиями")
+    Container(api_mesh, "Service Mesh", "Istio", "Управление межсервисным взаимодействием")
+}
+
+System_Boundary(external_systems, "Внешние системы") {
+    System_Ext(pharma_systems, "Фармацевтические системы", "Системы партнеров")
+    System_Ext(medical_equipment, "Медицинское оборудование", "Оборудование производителей")
+}
+
+' Relationships - User interactions
+Rel(doctor, clinical_api, "Использует", "HTTPS/REST")
+Rel(analyst, data_portal, "Создает отчеты", "HTTPS")
+Rel(admin, data_portal, "Управляет", "HTTPS")
+Rel(client, fintech_api, "Использует услуги", "HTTPS/REST")
+
+' Relationships - Portal and Gateway
+Rel(data_portal, api_gateway, "Маршрутизирует запросы", "HTTPS/REST")
+Rel(api_gateway, metadata_service, "Проверяет права", "gRPC")
+
+' Relationships - Clinical Domain
+Rel(api_gateway, clinical_api, "Маршрутизирует", "HTTPS/REST")
+Rel(clinical_api, clinical_db, "Читает/пишет", "SQL")
+Rel(clinical_etl, clinical_db, "Загружает данные", "SQL")
+Rel(clinical_etl, legacy_dwh, "Мигрирует данные", "SQL")
+
+' Relationships - AI Domain
+Rel(clinical_api, ai_service, "Запрашивает ИИ", "REST/gRPC")
+Rel(ai_service, ai_data_lake, "Читает данные", "S3 API")
+Rel(ml_platform, ai_service, "Развертывает", "Kubernetes API")
+
+' Relationships - FinTech Domain
+Rel(api_gateway, fintech_api, "Маршрутизирует", "HTTPS/REST")
+Rel(fintech_api, fintech_db, "Читает/пишет", "SQL")
+Rel(fintech_api, payment_service, "Обрабатывает платежи", "REST")
+Rel(fintech_etl, fintech_db, "Загружает данные", "SQL")
+
+' Relationships - Analytics Domain
+Rel(api_gateway, olap_engine, "Запросы аналитики", "SQL/REST")
+Rel(data_portal, olap_engine, "Получает данные для отчетов", "SQL")
+Rel(etl_orchestrator, data_warehouse, "Загружает данные", "SQL")
+Rel(etl_orchestrator, data_lake, "Обрабатывает сырые данные", "S3 API")
+Rel(streaming_platform, data_lake, "Стримит данные", "Kafka Connect")
+Rel(streaming_platform, olap_engine, "Поставляет данные реального времени", "Kafka")
+
+' Relationships - Integration Layer
+Rel(clinical_etl, streaming_platform, "Публикует события", "Kafka")
+Rel(fintech_etl, streaming_platform, "Публикует события", "Kafka")
+Rel(ai_service, streaming_platform, "Публикует результаты", "Kafka")
+Rel(event_bus, streaming_platform, "Интегрируется", "Kafka")
+
+' External integrations
+Rel(pharma_systems, event_bus, "Интегрируется", "REST/Kafka")
+Rel(medical_equipment, clinical_api, "Передает данные", "REST/MQTT")
+
+@enduml
